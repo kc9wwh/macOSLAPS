@@ -55,15 +55,12 @@
 ## User Variables
 jamfProURL="$4"
 jamfProUser="$5"
+jamfProPass="$6"
 LAPSaccount="$7"
 extensionAttributeID="$8"
 
-## System Variables
-mySerial=$( system_profiler SPHardwareDataType | grep Serial |  awk '{print $NF}' )
-jamfProPass=$( echo "${6}" | /usr/bin/openssl enc -aes256 -d -a -A -S "${9}" -k "${10}" )
-jamfProID=$( curl -sk -u "${jamfProUser}:${jamfProPass}" ${jamfProURL}/JSSResource/computers/serialnumber/"${mySerial}"/subset/general | xpath "//computer/general/id/text()" )
+## Credit to scriptingosx.com for dealing with perl changes between Big Sur and previous macOS versions - https://scriptingosx.com/2020/10/dealing-with-xpath-changes-in-big-sur/
 
-## Credit to scriptingosx.com for dealing with perl changes between Big Sur and previos macOS versions - https://scriptingosx.com/2020/10/dealing-with-xpath-changes-in-big-sur/
 xpath() {
     # the xpath tool changes in Big Sur 
     if [[ $(sw_vers -buildVersion) > "20A" ]]; then
@@ -72,6 +69,11 @@ xpath() {
         /usr/bin/xpath "$@"
     fi
 }
+
+## System Variables
+mySerial=$( system_profiler SPHardwareDataType | grep Serial |  awk '{print $NF}' )
+jamfProID=$( curl -sk -u "${jamfProUser}:${jamfProPass}" ${jamfProURL}/JSSResource/computers/serialnumber/"${mySerial}"/subset/general | xpath "//computer/general/id/text()" )
+echo "Current Machine ID: $jamfProID"
 
 ## Grab Current LAPS Password
 LAPScurrent=$( curl -sk -u "${jamfProUser}:${jamfProPass}" ${jamfProURL}/JSSResource/computers/id/"${jamfProID}"/subset/extension_attributes | xmllint --format - | grep -A4 "<id>${extensionAttributeID}</id>" | grep "<value>.*</value>" | awk -F "<value>|</value>" '{print $2}' )
